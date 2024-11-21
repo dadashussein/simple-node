@@ -4,7 +4,8 @@ image:
   tag: "latest"
 
 service:
-  type: ClusterIP
+  name: node-app
+  type: NodePort
   port: 3000
 
 resources:
