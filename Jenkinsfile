@@ -7,12 +7,13 @@ pipeline {
         DOCKER_REGISTRY = 'registry.digitalocean.com/dadas'  // Digital Ocean Container Registry
         KUBE_NAMESPACE = 'default'                                  // Kubernetes namespace
         HELM_CHART_PATH = './helm/nodejs-app'                       // Helm chart path
+        GIT_CREDENTIALS_ID = 'github-access-token'
     }
 
     stages {
         stage('Clone Repository') {
             steps {
-                git branch: 'main', url: "${REPO_URL}"
+                git branch: 'main', url: "${REPO_URL}", credentialsId: "${GIT_CREDENTIALS_ID}"
             }
         }
 
