@@ -38,6 +38,9 @@ pipeline {
             """
         }
     }
+    triggers {
+        githubPush()
+    }
     environment {
         ECR_URL = '051826725870.dkr.ecr.eu-west-1.amazonaws.com'
         IMAGE_NAME = 'nestjs'
@@ -56,7 +59,7 @@ pipeline {
             steps {
                 git url: "${GITHUB_REPO}", branch: "${GITHUB_BRANCH}"
             }
-         }       
+        }
         stage('Prepare Docker') {
             steps {
                 container('docker') {
@@ -82,7 +85,7 @@ pipeline {
                     withCredentials([aws(credentialsId: "${AWS_CREDENTIALS}")]) {
                         sh """
                         aws ecr get-login-password --region \${AWS_REGION} | docker login --username AWS --password-stdin \${ECR_REPOSITORY}
-                        kubectl create secret generic ecr-secret --namespace=default --from-file=.dockerconfigjson=\$HOME/.docker/config.json --dry-run=client -o json | kubectl apply -f -
+                        kubectl create secret generic ecr-secret --namespace=\${KUBE_NAMESPACE} --from-file=.dockerconfigjson=\$HOME/.docker/config.json --dry-run=client -o json | kubectl apply -f -
                         """
                     }
                 }
@@ -90,19 +93,9 @@ pipeline {
         }
         stage('Push Docker Image to ECR') {
             steps {
-                script {
-                    if (currentBuild.result != 'FAILURE') {
-                        env.PUSH_SUCCESSFUL = true
-                    } else {
-                        env.PUSH_SUCCESSFUL = false
-                        }
-                    container('docker') {
-                        withCredentials([aws(credentialsId: "${AWS_CREDENTIALS}")]) {
-                            sh """
-                            aws ecr get-login-password --region ${AWS_REGION} | docker login -u AWS --password-stdin ${ECR_REPOSITORY}
-                            """
-                        }
-                        // Push Docker image to ECR
+                container('docker') {
+                    withCredentials([aws(credentialsId: "${AWS_CREDENTIALS}")]) {
+                        sh "aws ecr get-login-password --region ${AWS_REGION} | docker login -u AWS --password-stdin ${ECR_REPOSITORY}"
                         sh "docker push ${ECR_REPOSITORY}:${IMAGE_TAG}"
                     }
                 }
@@ -112,12 +105,43 @@ pipeline {
             steps {
                 container('helm') {
                     sh """
-                    helm upgrade --install ${HELM_CHART_NAME}  ./helm-chart \\
+                    helm upgrade --install ${HELM_CHART_NAME} ./helm-chart \\
                         --set image.repository=${ECR_REPOSITORY} \\
                         --set image.tag=${IMAGE_TAG} \\
                         -f ./helm-chart/values.yaml \\
-                        --namespace default
+                        --namespace ${KUBE_NAMESPACE}
                     """
+                }
+            }
+        }
+        stage('Clean Up Docker') {
+            steps {
+                container('docker') {
+                    sh """
+                    docker system prune -af || true
+                    docker volume prune -f || true
+                    """
+                }
+            }
+        }
+        stage('Rollback Deployment') {
+            when {
+                expression { currentBuild.result == 'FAILURE' }
+            }
+            steps {
+                container('helm') {
+                    sh "helm rollback ${HELM_CHART_NAME} 1 || echo 'No previous release to rollback'"
+                }
+            }
+        }
+        stage('Notifications') {
+            steps {
+                script {
+                    if (currentBuild.result == 'SUCCESS') {
+                        echo "Deployment succeeded."
+                    } else {
+                        echo "Deployment failed."
+                    }
                 }
             }
         }
