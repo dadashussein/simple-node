@@ -1,12 +1,12 @@
 image:
-  repository: your-docker-registry/nodejs-app
+  repository: 051826725870.dkr.ecr.eu-west-1.amazonaws.com/nestjs
   pullPolicy: IfNotPresent
-  tag: "latest"
+  tag: latest
 
 service:
-  name: node-app
   type: NodePort
   port: 3000
+  nodePort: 32001
 
 resources:
   limits:
