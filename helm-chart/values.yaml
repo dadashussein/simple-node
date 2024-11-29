@@ -7,7 +7,7 @@ image:
   # -- Container image repository
   repository: 051826725870.dkr.ecr.eu-west-1.amazonaws.com/nestjs
   # -- Image pull policy (Always, IfNotPresent, Never)
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
   # -- Image tag (consider using a specific version instead of latest)
   tag: latest
 
@@ -18,6 +18,17 @@ imagePullSecrets:
 # Application Naming
 nameOverride: ""
 fullnameOverride: ""
+
+# Deployment Strategy
+updateStrategy:
+  type: RollingUpdate
+  rollingUpdate:
+    maxSurge: 1
+    maxUnavailable: 0
+
+# Pod annotations to force update
+podAnnotations:
+  rollme: "{{ randAlphaNum 5 | quote }}"
 
 # Service Account Configuration
 serviceAccount:
@@ -31,7 +42,6 @@ serviceAccount:
   name: ""
 
 # Pod Configuration
-podAnnotations: {}
 podLabels: {}
 
 # Security Context
