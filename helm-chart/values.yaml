@@ -1,23 +1,165 @@
+# Global Configuration
+# -- Number of pod replicas to run
+replicaCount: 2
+
+# Image Configuration
 image:
+  # -- Container image repository
   repository: 051826725870.dkr.ecr.eu-west-1.amazonaws.com/nestjs
+  # -- Image pull policy (Always, IfNotPresent, Never)
   pullPolicy: IfNotPresent
+  # -- Image tag (consider using a specific version instead of latest)
   tag: latest
 
-service:
-  type: NodePort
-  port: 3000
-  nodePort: 32001
+# Image Pull Secrets
+imagePullSecrets:
+  - name: ecr-secret
 
+# Application Naming
+nameOverride: ""
+fullnameOverride: ""
+
+# Service Account Configuration
+serviceAccount:
+  # -- Specifies whether a service account should be created
+  create: true
+  # -- Automatically mount a ServiceAccount's API credentials
+  automount: true
+  # -- Annotations to add to the service account
+  annotations: {}
+  # -- The name of the service account to use
+  name: ""
+
+# Pod Configuration
+podAnnotations: {}
+podLabels: {}
+
+# Security Context
+podSecurityContext:
+  fsGroup: 1000
+  runAsNonRoot: true
+  runAsUser: 1000
+
+# Container Security Context
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+  runAsNonRoot: true
+  runAsUser: 1000
+
+# Service Configuration
+service:
+  # -- Service type (ClusterIP, NodePort, LoadBalancer)
+  type: NodePort
+  # -- Service port
+  port: 3000
+  # -- Node port (only if service.type is NodePort)
+  nodePort: 32001
+  # -- Additional service annotations
+  annotations: {}
+
+# Ingress Configuration
+ingress:
+  # -- Enable ingress controller resource
+  enabled: false
+  # -- IngressClass that will be be used
+  className: ""
+  # -- Ingress annotations
+  annotations: {}
+  # -- Ingress hosts configuration
+  hosts:
+    - host: chart-example.local
+      paths:
+        - path: /
+          pathType: ImplementationSpecific
+  # -- TLS configuration
+  tls: []
+
+# Resource Management
 resources:
   limits:
-    cpu: 200m
-    memory: 256Mi
+    memory: "256Mi"
+    cpu: "500m"
   requests:
-    cpu: 100m
-    memory: 128Mi
+    memory: "128Mi"
+    cpu: "250m"
 
+# Health Checks
+livenessProbe:
+  httpGet:
+    path: /
+    port: 3000
+  initialDelaySeconds: 3
+  periodSeconds: 5
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /
+    port: 3000
+  initialDelaySeconds: 3
+  periodSeconds: 5
+  timeoutSeconds: 5
+  failureThreshold: 3
+
+# Horizontal Pod Autoscaling
 autoscaling:
+  # -- Enable autoscaling
   enabled: false
   minReplicas: 1
-  maxReplicas: 3
+  maxReplicas: 100
   targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+# Environment Variables
+env:
+  # -- Environment variables as key-value pairs
+  variables: {}
+  # -- Environment variables from ConfigMaps
+  configMaps: []
+  # -- Environment variables from Secrets
+  secrets: []
+
+# Storage Configuration
+persistence:
+  # -- Enable persistent storage
+  enabled: false
+  # -- Storage class name
+  storageClassName: ""
+  # -- Persistent Volume size
+  size: 1Gi
+  # -- Access modes for the PVC
+  accessModes:
+    - ReadWriteOnce
+
+volumes: []
+volumeMounts: []
+
+# Node Scheduling
+nodeSelector: {}
+tolerations: []
+affinity: {}
+
+# Metrics Configuration
+metrics:
+  # -- Enable prometheus metrics
+  enabled: false
+  # -- Prometheus metrics port
+  port: 9090
+  # -- ServiceMonitor configuration for Prometheus Operator
+  serviceMonitor:
+    enabled: false
+    interval: 15s
+
+# Network Policy
+networkPolicy:
+  # -- Enable network policy
+  enabled: false
+  # -- Define allowed ingress traffic
+  ingress: []
+  # -- Define allowed egress traffic
+  egress: []
