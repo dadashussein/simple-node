@@ -121,11 +121,5 @@ pipeline {
                 }
             }
         }
-
-        post{
-            always{
-                cleanWs()
-            }
-        }
     }
 }
