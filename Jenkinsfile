@@ -44,7 +44,7 @@ pipeline {
     environment {
         ECR_URL = '051826725870.dkr.ecr.eu-west-1.amazonaws.com'
         IMAGE_NAME = 'nestjs'
-        IMAGE_TAG = "${BUILD_NUMBER}"
+        IMAGE_TAG = 'latest'
         KUBE_NAMESPACE = 'default'
         AWS_CREDENTIALS = 'aws_credentials'
         AWS_REGION = 'eu-west-1'
@@ -75,7 +75,7 @@ pipeline {
         stage('Application Build') {
             steps {
                 container('docker') {
-                    sh "docker build -t ${ECR_REPOSITORY}:${IMAGE_TAG} --build-arg BUILD_NUMBER=${BUILD_NUMBER} ."
+                    sh "docker build -t ${ECR_REPOSITORY}:${IMAGE_TAG} ."
                 }
             }
         }
@@ -105,12 +105,11 @@ pipeline {
             steps {
                 container('helm') {
                     sh """
-                    kubectl delete pods -l app.kubernetes.io/name=simple-node -n ${KUBE_NAMESPACE} || true
                     helm upgrade --install ${HELM_CHART_NAME} ./helm-chart \\
                         --set image.repository=${ECR_REPOSITORY} \\
                         --set image.tag=${IMAGE_TAG} \\
-                        --set image.pullPolicy=Always \\
-                        --atomic \\
+                        --set podAnnotations.timestamp='\\"'\$(date +%s)'\\"' \\
+                        --force \\
                         -f ./helm-chart/values.yaml \\
                         --namespace ${KUBE_NAMESPACE}
                     """
