@@ -1,6 +1,6 @@
 # Global Configuration
 # -- Number of pod replicas to run
-replicaCount: 2
+replicaCount: 1
 
 # Image Configuration
 image:
