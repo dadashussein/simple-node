@@ -7,8 +7,7 @@ app.get('/', (req, res) => {
   res.json({
     message: 'Salam Rolls!',
     hostname: os.hostname(),
-    timestamp: new Date().toISOString(),
-    version: process.env.BUILD_NUMBER || 'unknown'
+    timestamp: new Date().toISOString()
   });
 });
 
