@@ -108,8 +108,6 @@ pipeline {
                     helm upgrade --install ${HELM_CHART_NAME} ./helm-chart \\
                         --set image.repository=${ECR_REPOSITORY} \\
                         --set image.tag=${IMAGE_TAG} \\
-                        --set podAnnotations.timestamp='\\"'\$(date +%s)'\\"' \\
-                        --force \\
                         -f ./helm-chart/values.yaml \\
                         --namespace ${KUBE_NAMESPACE}
                     """
