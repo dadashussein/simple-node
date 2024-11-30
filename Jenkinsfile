@@ -105,11 +105,22 @@ pipeline {
             steps {
                 container('helm') {
                     sh """
-                    helm upgrade --install ${HELM_CHART_NAME} ./helm-chart \\
-                        --set image.repository=${ECR_REPOSITORY} \\
-                        --set image.tag=${IMAGE_TAG} \\
-                        -f ./helm-chart/values.yaml \\
-                        --namespace ${KUBE_NAMESPACE}
+                    # Check for any existing Helm operations
+                    if helm history ${HELM_CHART_NAME} -n ${KUBE_NAMESPACE} 2>/dev/null | grep 'pending'; then
+                        echo "Found pending operations. Attempting to rollback..."
+                        helm rollback ${HELM_CHART_NAME} 0 -n ${KUBE_NAMESPACE} || true
+                        sleep 10
+                    fi
+
+                    # Attempt the upgrade with a timeout
+                    timeout 300s helm upgrade --install ${HELM_CHART_NAME} ./helm-chart \
+                        --set image.repository=${ECR_REPOSITORY} \
+                        --set image.tag=${IMAGE_TAG} \
+                        -f ./helm-chart/values.yaml \
+                        --namespace ${KUBE_NAMESPACE} \
+                        --atomic \
+                        --cleanup-on-fail \
+                        --wait
                     """
                 }
             }
