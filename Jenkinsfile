@@ -29,12 +29,18 @@ pipeline {
                 - name: DOCKER_HOST
                   value: tcp://localhost:2375
               - name: kubernetes
-                image: dtzar/helm-kubectl:latest
+                image: bitnami/kubectl:latest
                 command: ['cat']
                 tty: true
+                volumeMounts:
+                - name: kube-config
+                  mountPath: /root/.kube
               volumes:
               - name: dind-storage
                 emptyDir: {}
+              - name: kube-config
+                secret:
+                  secretName: kube-config
             """
         }
     }
@@ -159,46 +165,48 @@ pipeline {
         stage('Deploy to Kubernetes with Helm') {
             steps {
                 container('kubernetes') {
-                    sh """
-                    # Verify tools
-                    helm version
-                    kubectl version --client
-                    
-                    # Add debug information
-                    echo "Current context:"
-                    kubectl config current-context
-                    echo "Available pods before deployment:"
-                    kubectl get pods -n ${KUBE_NAMESPACE}
+                    withCredentials([aws(credentialsId: "${AWS_CREDENTIALS}")]) {
+                        sh """
+                            # Verify kubectl configuration
+                            kubectl config view
+                            kubectl cluster-info
+                            
+                            # Add debug information
+                            echo "Current context:"
+                            kubectl config current-context
+                            echo "Available pods before deployment:"
+                            kubectl get pods -n ${KUBE_NAMESPACE}
 
-                    # Verify helm chart
-                    helm lint ./helm-chart
+                            # Verify helm chart
+                            helm lint ./helm-chart
 
-                    # Perform helm upgrade with rollback on failure
-                    if ! helm upgrade ${HELM_CHART_NAME} ./helm-chart \
-                        --install \
-                        --namespace ${KUBE_NAMESPACE} \
-                        --set image.repository=${ECR_REPOSITORY} \
-                        --set image.tag=${IMAGE_TAG} \
-                        --wait \
-                        --timeout 90s \
-                        --atomic \
-                        --cleanup-on-fail \
-                        -f ./helm-chart/values.yaml; then
-                        
-                        echo "Deployment failed. Checking pod status..."
-                        kubectl get pods -n ${KUBE_NAMESPACE}
-                        echo "Checking pod logs..."
-                        kubectl logs -l app=${HELM_CHART_NAME} -n ${KUBE_NAMESPACE} --tail=50
-                        exit 1
-                    fi
+                            # Perform helm upgrade with rollback on failure
+                            if ! helm upgrade ${HELM_CHART_NAME} ./helm-chart \
+                                --install \
+                                --namespace ${KUBE_NAMESPACE} \
+                                --set image.repository=${ECR_REPOSITORY} \
+                                --set image.tag=${IMAGE_TAG} \
+                                --wait \
+                                --timeout 90s \
+                                --atomic \
+                                --cleanup-on-fail \
+                                -f ./helm-chart/values.yaml; then
+                                
+                                echo "Deployment failed. Checking pod status..."
+                                kubectl get pods -n ${KUBE_NAMESPACE}
+                                echo "Checking pod logs..."
+                                kubectl logs -l app=${HELM_CHART_NAME} -n ${KUBE_NAMESPACE} --tail=50
+                                exit 1
+                            fi
 
-                    # Verify deployment
-                    echo "Checking deployment status..."
-                    kubectl rollout status deployment/${HELM_CHART_NAME} -n ${KUBE_NAMESPACE} --timeout=60s
-                    
-                    echo "Final pod status:"
-                    kubectl get pods -n ${KUBE_NAMESPACE}
-                    """
+                            # Verify deployment
+                            echo "Checking deployment status..."
+                            kubectl rollout status deployment/${HELM_CHART_NAME} -n ${KUBE_NAMESPACE} --timeout=60s
+                            
+                            echo "Final pod status:"
+                            kubectl get pods -n ${KUBE_NAMESPACE}
+                        """
+                    }
                 }
             }
         }
