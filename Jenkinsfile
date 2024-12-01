@@ -45,7 +45,7 @@ pipeline {
         ECR_URL = '051826725870.dkr.ecr.eu-west-1.amazonaws.com'
         IMAGE_NAME = 'nestjs'
         GIT_COMMIT_SHORT = "${env.GIT_COMMIT.substring(0, 7)}"
-        IMAGE_TAG = "${GIT_COMMIT_SHORT}"
+        IMAGE_TAG = "latest"
         KUBE_NAMESPACE = 'default'
         AWS_CREDENTIALS = 'aws_credentials'
         AWS_REGION = 'eu-west-1'
