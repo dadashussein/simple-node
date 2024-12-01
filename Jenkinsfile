@@ -117,7 +117,7 @@ pipeline {
 
                 echo "Deploying with Helm..."
                 sh """
-                timeout 300s helm upgrade --install ${HELM_CHART_NAME} ./helm-chart \
+                timeout 60s helm upgrade --install ${HELM_CHART_NAME} ./helm-chart \
                     --set image.repository=${ECR_REPOSITORY} \
                     --set image.tag=${IMAGE_TAG} \
                     --set image.pullPolicy=Always \
