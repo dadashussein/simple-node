@@ -11,6 +11,29 @@ image:
   # -- Image tag (consider using a specific version instead of latest)
   tag: latest
 
+# -- Container port
+containerPort: 3000
+
+# -- Readiness probe configuration
+readinessProbe:
+  httpGet:
+    path: /
+    port: 3000
+  initialDelaySeconds: 5
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 3
+
+# -- Liveness probe configuration
+livenessProbe:
+  httpGet:
+    path: /
+    port: 3000
+  initialDelaySeconds: 10
+  periodSeconds: 10
+  timeoutSeconds: 3
+  failureThreshold: 3
+
 # Image Pull Secrets
 imagePullSecrets:
   - name: ecr-secret
