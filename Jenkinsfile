@@ -44,8 +44,7 @@ pipeline {
     environment {
         ECR_URL = '051826725870.dkr.ecr.eu-west-1.amazonaws.com'
         IMAGE_NAME = 'nestjs'
-        GIT_COMMIT_SHORT = "${env.GIT_COMMIT.substring(0, 7)}"
-        IMAGE_TAG = "latest"
+        IMAGE_TAG = 'latest'
         KUBE_NAMESPACE = 'default'
         AWS_CREDENTIALS = 'aws_credentials'
         AWS_REGION = 'eu-west-1'
@@ -56,7 +55,7 @@ pipeline {
         HELM_CHART_NAME = 'simple-node'
     }
     stages {
-        stage('Checkout Code') {
+        stage('Checkout Dockerfile') {
             steps {
                 git url: "${GITHUB_REPO}", branch: "${GITHUB_BRANCH}"
             }
@@ -80,16 +79,13 @@ pipeline {
                 }
             }
         }
-        stage('Create or Update ECR Secret') {
+        stage('Create ECR Secret') {
             steps {
                 container('docker') {
                     withCredentials([aws(credentialsId: "${AWS_CREDENTIALS}")]) {
                         sh """
                         aws ecr get-login-password --region \${AWS_REGION} | docker login --username AWS --password-stdin \${ECR_REPOSITORY}
-                        if kubectl get secret ecr-secret -n \${KUBE_NAMESPACE}; then
-                            kubectl delete secret ecr-secret -n \${KUBE_NAMESPACE}
-                        fi
-                        kubectl create secret generic ecr-secret --namespace=\${KUBE_NAMESPACE} --from-file=.dockerconfigjson=\$HOME/.docker/config.json
+                        kubectl create secret generic ecr-secret --namespace=\${KUBE_NAMESPACE} --from-file=.dockerconfigjson=\$HOME/.docker/config.json --dry-run=client -o json | kubectl apply -f -
                         """
                     }
                 }
@@ -102,6 +98,50 @@ pipeline {
                         sh "aws ecr get-login-password --region ${AWS_REGION} | docker login -u AWS --password-stdin ${ECR_REPOSITORY}"
                         sh "docker push ${ECR_REPOSITORY}:${IMAGE_TAG}"
                     }
+                }
+            }
+        }
+        stage('Deploy to Kubernetes with Helm') {
+            steps {
+                container('helm') {
+                    sh """
+                    # Check for any existing Helm operations
+                    if helm history ${HELM_CHART_NAME} -n ${KUBE_NAMESPACE} 2>/dev/null | grep 'pending'; then
+                        echo "Found pending operations. Attempting to rollback..."
+                        helm rollback ${HELM_CHART_NAME} 0 -n ${KUBE_NAMESPACE} || true
+                        sleep 10
+                    fi
+
+                    # Attempt the upgrade with a timeout
+                    timeout 300s helm upgrade --install ${HELM_CHART_NAME} ./helm-chart \
+                        --set image.repository=${ECR_REPOSITORY} \
+                        --set image.tag=${IMAGE_TAG} \
+                        -f ./helm-chart/values.yaml \
+                        --namespace ${KUBE_NAMESPACE} \
+                        --atomic \
+                        --cleanup-on-fail \
+                        --wait
+                    """
+                }
+            }
+        }
+        stage('Clean Up Docker') {
+            steps {
+                container('docker') {
+                    sh """
+                    docker system prune -af || true
+                    docker volume prune -f || true
+                    """
+                }
+            }
+        }
+        stage('Rollback Deployment') {
+            when {
+                expression { currentBuild.result == 'FAILURE' }
+            }
+            steps {
+                container('helm') {
+                    sh "helm rollback ${HELM_CHART_NAME} 1 || echo 'No previous release to rollback'"
                 }
             }
         }
