@@ -101,27 +101,6 @@ pipeline {
                 }
             }
         }
-        stage('Deploy to Kubernetes with Helm') {
-            steps {
-                container('helm') {
-                    sh """
-                    # Check for any existing Helm operations
-                    if helm history ${HELM_CHART_NAME} -n ${KUBE_NAMESPACE} 2>/dev/null | grep 'pending'; then
-                        echo "Found pending operations. Attempting to rollback..."
-                        helm rollback ${HELM_CHART_NAME} 0 -n ${KUBE_NAMESPACE} || true
-                        sleep 10
-                    fi
-
-                    # Attempt the upgrade with a timeout
-                    timeout 100s helm upgrade --install ${HELM_CHART_NAME} ./helm-chart \
-                        --namespace ${KUBE_NAMESPACE} \
-                        --atomic \
-                        --cleanup-on-fail \
-                        --wait
-                    """
-                }
-            }
-        }
         stage('Clean Up Docker') {
             steps {
                 container('docker') {
@@ -129,27 +108,6 @@ pipeline {
                     docker system prune -af || true
                     docker volume prune -f || true
                     """
-                }
-            }
-        }
-        stage('Rollback Deployment') {
-            when {
-                expression { currentBuild.result == 'FAILURE' }
-            }
-            steps {
-                container('helm') {
-                    sh "helm rollback ${HELM_CHART_NAME} 1 || echo 'No previous release to rollback'"
-                }
-            }
-        }
-        stage('Notifications') {
-            steps {
-                script {
-                    if (currentBuild.result == null || currentBuild.result == 'SUCCESS') {
-                        echo "Deployment succeeded."
-                    } else {
-                        echo "Deployment failed."
-                    }
                 }
             }
         }
