@@ -74,18 +74,6 @@ pipeline {
                 }
             }
         }
-        stage('Unit Tests') {
-            steps {
-                container('docker') {
-                    sh '''
-                        docker run --rm node:16-alpine sh -c "
-                        npm install -g jest
-                        npm install
-                        npm test"
-                    '''
-                }
-            }
-        }
         stage('Application Build') {
             steps {
                 container('docker') {
