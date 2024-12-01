@@ -108,26 +108,30 @@ pipeline {
         stage('Deploy to Kubernetes with Helm') {
             steps {
                 container('helm') {
-                    sh """
-                    if helm history ${HELM_CHART_NAME} -n ${KUBE_NAMESPACE} 2>/dev/null | grep 'pending'; then
-                        echo "Found pending operations. Rolling back..."
-                        helm rollback ${HELM_CHART_NAME} 0 -n ${KUBE_NAMESPACE} || true
-                        sleep 10
-                    fi
+                    script {
+                    if (sh(script: "helm history ${HELM_CHART_NAME} -n ${KUBE_NAMESPACE} 2>/dev/null | grep 'pending'", returnStatus: true) == 0) {
+                        echo "Found pending operations. Uninstalling previous release..."
+                        sh "helm uninstall ${HELM_CHART_NAME} -n ${KUBE_NAMESPACE} || true"
+                        sh "sleep 10"
+                    }
 
-                    timeout 300s helm upgrade --install ${HELM_CHART_NAME} ./helm-chart \
-                        --set image.repository=${ECR_REPOSITORY} \
-                        --set image.tag=${IMAGE_TAG} \
-                        --set image.pullPolicy=Always \
-                        -f ./helm-chart/values.yaml \
-                        --namespace ${KUBE_NAMESPACE} \
-                        --atomic \
-                        --cleanup-on-fail \
-                        --wait
-                    """
-                }
+                echo "Deploying with Helm..."
+                sh """
+                timeout 300s helm upgrade --install ${HELM_CHART_NAME} ./helm-chart \
+                    --set image.repository=${ECR_REPOSITORY} \
+                    --set image.tag=${IMAGE_TAG} \
+                    --set image.pullPolicy=Always \
+                    -f ./helm-chart/values.yaml \
+                    --namespace ${KUBE_NAMESPACE} \
+                    --atomic \
+                    --cleanup-on-fail \
+                    --wait
+                """
             }
         }
+    }
+}
+
         stage('Clean Up Docker') {
             steps {
                 container('docker') {
