@@ -28,8 +28,8 @@ pipeline {
                   value: ""
                 - name: DOCKER_HOST
                   value: tcp://localhost:2375
-              - name: helm
-                image: alpine/helm:3.11.1
+              - name: kubernetes
+                image: dtzar/helm-kubectl:latest
                 command: ['cat']
                 tty: true
               volumes:
@@ -158,13 +158,12 @@ pipeline {
         }
         stage('Deploy to Kubernetes with Helm') {
             steps {
-                container('helm') {
+                container('kubernetes') {
                     sh """
-                    # Check if namespace exists, create if it doesn't
-                    if ! kubectl get namespace ${KUBE_NAMESPACE} > /dev/null 2>&1; then
-                        kubectl create namespace ${KUBE_NAMESPACE}
-                    fi
-
+                    # Verify tools
+                    helm version
+                    kubectl version --client
+                    
                     # Add debug information
                     echo "Current context:"
                     kubectl config current-context
@@ -175,7 +174,7 @@ pipeline {
                     helm lint ./helm-chart
 
                     # Perform helm upgrade with rollback on failure
-                    if ! timeout 100s helm upgrade ${HELM_CHART_NAME} ./helm-chart \
+                    if ! helm upgrade ${HELM_CHART_NAME} ./helm-chart \
                         --install \
                         --namespace ${KUBE_NAMESPACE} \
                         --set image.repository=${ECR_REPOSITORY} \
@@ -218,7 +217,7 @@ pipeline {
                 expression { currentBuild.result == 'FAILURE' }
             }
             steps {
-                container('helm') {
+                container('kubernetes') {
                     sh "helm rollback ${HELM_CHART_NAME} 1 || echo 'No previous release to rollback'"
                 }
             }
