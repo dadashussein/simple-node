@@ -53,6 +53,8 @@ pipeline {
         GITHUB_REPO = 'https://github.com/dadashussein/simple-node.git'
         GITHUB_BRANCH = 'main'
         HELM_CHART_NAME = 'simple-node'
+        SONAR_PROJECT_KEY = 'simple-node'
+        SLACK_CHANNEL = '#deployments'
     }
     stages {
         stage('Checkout Dockerfile') {
@@ -72,10 +74,43 @@ pipeline {
                 }
             }
         }
+        stage('Unit Tests') {
+            steps {
+                container('docker') {
+                    sh '''
+                        docker run --rm node:16-alpine sh -c "
+                        npm install -g jest
+                        npm install
+                        npm test"
+                    '''
+                }
+            }
+        }
         stage('Application Build') {
             steps {
                 container('docker') {
                     sh "docker build -t ${ECR_REPOSITORY}:${IMAGE_TAG} ."
+                }
+            }
+        }
+        stage('SonarQube Analysis') {
+            steps {
+                container('docker') {
+                    withSonarQubeEnv('SonarQube') {
+                        sh '''
+                            docker run --rm \
+                                -e SONAR_HOST_URL=$SONAR_HOST_URL \
+                                -e SONAR_LOGIN=$SONAR_AUTH_TOKEN \
+                                -v "${WORKSPACE}:/usr/src" \
+                                sonarsource/sonar-scanner-cli:latest \
+                                -Dsonar.projectKey=${SONAR_PROJECT_KEY} \
+                                -Dsonar.sources=. \
+                                -Dsonar.host.url=$SONAR_HOST_URL
+                        '''
+                    }
+                    timeout(time: 2, unit: 'MINUTES') {
+                        waitForQualityGate abortPipeline: true
+                    }
                 }
             }
         }
@@ -85,10 +120,7 @@ pipeline {
                     withCredentials([aws(credentialsId: "${AWS_CREDENTIALS}")]) {
                         sh """
                         aws ecr get-login-password --region \${AWS_REGION} | docker login --username AWS --password-stdin \${ECR_REPOSITORY}
-                        kubectl create secret generic ecr-secret \
-                            --namespace=default \
-                            --from-file=.dockerconfigjson=/root/.docker/config.json \
-                            --dry-run=client -o yaml | kubectl apply -f -
+                        kubectl create secret generic ecr-secret --namespace=\${KUBE_NAMESPACE} --from-file=.dockerconfigjson=\$HOME/.docker/config.json --dry-run=client -o json | kubectl apply -f -
                         """
                     }
                 }
@@ -128,6 +160,32 @@ pipeline {
                 }
             }
         }
+        stage('Verify Deployment') {
+            steps {
+                container('docker') {
+                    script {
+                        sh '''
+                            # Wait for pods to be ready
+                            kubectl wait --for=condition=ready pod -l app=simple-node --timeout=300s
+                            
+                            # Get service URL
+                            SERVICE_IP=$(kubectl get svc simple-node -o jsonpath='{.status.loadBalancer.ingress[0].hostname}')
+                            
+                            # Verify application response
+                            for i in {1..30}; do
+                                if curl -s http://${SERVICE_IP}:3000/ | grep -q "Salam Rolls!"; then
+                                    echo "Application verification successful!"
+                                    exit 0
+                                fi
+                                sleep 10
+                            done
+                            echo "Application verification failed!"
+                            exit 1
+                        '''
+                    }
+                }
+            }
+        }
         stage('Clean Up Docker') {
             steps {
                 container('docker') {
@@ -151,11 +209,26 @@ pipeline {
         stage('Notifications') {
             steps {
                 script {
-                    if (currentBuild.result == null || currentBuild.result == 'SUCCESS') {
-                        echo "Deployment succeeded."
-                    } else {
-                        echo "Deployment failed."
-                    }
+                    def buildStatus = currentBuild.result ?: 'SUCCESS'
+                    def message = """
+                        Pipeline: ${env.JOB_NAME}
+                        Status: ${buildStatus}
+                        Build: ${env.BUILD_NUMBER}
+                        Details: ${env.BUILD_URL}
+                    """
+                    
+                    slackSend(
+                        channel: SLACK_CHANNEL,
+                        color: buildStatus == 'SUCCESS' ? 'good' : 'danger',
+                        message: message
+                    )
+                    
+                    emailext(
+                        subject: "Pipeline Status: ${buildStatus}",
+                        body: message,
+                        recipientProviders: [[$class: 'DevelopersRecipientProvider']],
+                        to: '$DEFAULT_RECIPIENTS'
+                    )
                 }
             }
         }
