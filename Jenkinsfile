@@ -113,7 +113,7 @@ pipeline {
                     fi
 
                     # Attempt the upgrade with a timeout
-                    timeout 300s helm upgrade --install ${HELM_CHART_NAME} ./helm-chart \
+                    timeout 100s helm upgrade --install ${HELM_CHART_NAME} ./helm-chart \
                         --set image.repository=${ECR_REPOSITORY} \
                         --set image.tag=${IMAGE_TAG} \
                         -f ./helm-chart/values.yaml \
