@@ -7,7 +7,7 @@ image:
   # -- Container image repository
   repository: 051826725870.dkr.ecr.eu-west-1.amazonaws.com/nestjs
   # -- Image pull policy (Always, IfNotPresent, Never)
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
   # -- Image tag (consider using a specific version instead of latest)
   tag: latest
 
