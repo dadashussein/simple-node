@@ -1,0 +1,172 @@
+credentials:
+  system:
+    domainCredentials:
+    - credentials:
+      - aws:
+          accessKey: "AKIAQYEI5CPXN6TN6B6J"
+          description: "awsa"
+          id: "aws_credentials"
+          scope: GLOBAL
+          secretKey: "{AQAAABAAAAAwVXQ8X0Zoo5qEYoBTX+sbbWpzZ3TG+jcDwI51TkgARhcqRcHV9RjqIF6cmQrmrHyEw+9oax9o+xLOjZQmQf5cCA==}"
+      - string:
+          description: "kuebc"
+          id: "kubeconfig-credentials"
+          scope: GLOBAL
+          secret: "{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}"
+jenkins:
+  agentProtocols:
+  - "JNLP4-connect"
+  - "Ping"
+  authorizationStrategy:
+    loggedInUsersCanDoAnything:
+      allowAnonymousRead: false
+  clouds:
+  - kubernetes:
+      containerCap: 10
+      containerCapStr: "10"
+      jenkinsTunnel: "myjenkins-agent.default.svc.cluster.local:50000"
+      jenkinsUrl: "http://myjenkins.default.svc.cluster.local:8080"
+      name: "kubernetes"
+      namespace: "default"
+      podLabels:
+      - key: "jenkins/myjenkins-jenkins-agent"
+        value: "true"
+      serverUrl: "https://kubernetes.default"
+      templates:
+      - containers:
+        - args: "^${computer.jnlpmac} ^${computer.name}"
+          envVars:
+          - envVar:
+              key: "JENKINS_URL"
+              value: "http://myjenkins.default.svc.cluster.local:8080/"
+          image: "jenkins/inbound-agent:3273.v4cfe589b_fd83-1"
+          name: "jnlp"
+          resourceLimitCpu: "512m"
+          resourceLimitMemory: "512Mi"
+          resourceRequestCpu: "512m"
+          resourceRequestMemory: "512Mi"
+          workingDir: "/home/jenkins/agent"
+        id: "42bded8ec3f61c8c96801c1d85a30d56e84a8c53a8541dd374d93bae8f41f06f"
+        label: "myjenkins-jenkins-agent"
+        name: "default"
+        namespace: "default"
+        nodeUsageMode: "NORMAL"
+        podRetention: "never"
+        serviceAccount: "default"
+        slaveConnectTimeout: 100
+        slaveConnectTimeoutStr: "100"
+        yamlMergeStrategy: "override"
+  crumbIssuer:
+    standard:
+      excludeClientIPFromCrumb: true
+  disableRememberMe: false
+  labelAtoms:
+  - name: "built-in"
+  - name: "myjenkins-jenkins-agent"
+  markupFormatter: "plainText"
+  mode: NORMAL
+  myViewsTabBar: "standard"
+  nodeMonitors:
+  - "architecture"
+  - "clock"
+  - diskSpace:
+      freeSpaceThreshold: "1GiB"
+      freeSpaceWarningThreshold: "2GiB"
+  - "swapSpace"
+  - tmpSpace:
+      freeSpaceThreshold: "1GiB"
+      freeSpaceWarningThreshold: "2GiB"
+  - "responseTime"
+  numExecutors: 0
+  primaryView:
+    all:
+      name: "all"
+  projectNamingStrategy: "standard"
+  quietPeriod: 5
+  remotingSecurity:
+    enabled: true
+  scmCheckoutRetryCount: 0
+  securityRealm:
+    local:
+      allowsSignup: false
+      enableCaptcha: false
+      users:
+      - id: "admin"
+        name: "Jenkins Admin"
+        properties:
+        - "apiToken"
+        - "consoleUrlProvider"
+        - "mailer"
+        - "myView"
+        - preferredProvider:
+            providerId: "default"
+        - "timezone"
+        - "experimentalFlags"
+  slaveAgentPort: 50000
+  updateCenter:
+    sites:
+    - id: "default"
+      url: "https://updates.jenkins.io/update-center.json"
+  views:
+  - all:
+      name: "all"
+  viewsTabBar: "standard"
+globalCredentialsConfiguration:
+  configuration:
+    providerFilter: "none"
+    typeFilter: "none"
+appearance:
+  prism:
+    theme: PRISM
+security:
+  apiToken:
+    creationOfLegacyTokenEnabled: false
+    tokenGenerationOnCreationEnabled: false
+    usageStatisticsEnabled: true
+  cps:
+    hideSandbox: false
+  gitHooks:
+    allowedOnAgents: false
+    allowedOnController: false
+  gitHostKeyVerificationConfiguration:
+    sshHostKeyVerificationStrategy: "knownHostsFileVerificationStrategy"
+  scriptApproval:
+    forceSandbox: false
+unclassified:
+  buildDiscarders:
+    configuredBuildDiscarders:
+    - "jobBuildDiscarder"
+  fingerprints:
+    fingerprintCleanupDisabled: false
+    storage: "file"
+  gitHubPluginConfig:
+    hookUrl: "http://myjenkins:8080/github-webhook/"
+  githubPullRequests:
+    actualiseOnFactory: false
+  junitTestResultStorage:
+    storage: "file"
+  location:
+    adminAddress: "address not configured yet <nobody@nowhere>"
+    url: "http://myjenkins:8080/"
+  mailer:
+    charset: "UTF-8"
+    useSsl: false
+    useTls: false
+  pollSCM:
+    pollingThreadCount: 10
+  scmGit:
+    addGitTagAction: false
+    allowSecondFetch: false
+    createAccountBasedOnEmail: false
+    disableGitToolChooser: false
+    hideCredentials: false
+    showEntireCommitSummaryInChanges: false
+    useExistingAccountWithSameEmail: false
+tool:
+  git:
+    installations:
+    - home: "git"
+      name: "Default"
+  mavenGlobalConfig:
+    globalSettingsProvider: "standard"
+    settingsProvider: "standard"

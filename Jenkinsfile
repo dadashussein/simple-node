@@ -79,13 +79,42 @@ pipeline {
                 }
             }
         }
+        stage('Check and Create ECR Repository') {
+            steps {
+                container('docker') {
+                    withCredentials([aws(credentialsId: "${AWS_CREDENTIALS}")]) {
+                        script {
+                            def repositoryExists = sh(
+                                script: """
+                                    aws ecr describe-repositories \
+                                        --repository-names ${IMAGE_NAME} \
+                                        --region ${AWS_REGION} 2>&1 || echo 'REPOSITORY_NOT_FOUND'
+                                """,
+                                returnStdout: true
+                            ).trim()
+                            
+                            if (repositoryExists.contains('REPOSITORY_NOT_FOUND')) {
+                                echo "ECR repository doesn't exist. Creating new repository..."
+                                sh """
+                                    aws ecr create-repository \
+                                        --repository-name ${IMAGE_NAME} \
+                                        --region ${AWS_REGION}
+                                """
+                            } else {
+                                echo "ECR repository already exists"
+                            }
+                        }
+                    }
+                }
+            }
+        }
         stage('Create ECR Secret') {
             steps {
                 container('docker') {
                     withCredentials([aws(credentialsId: "${AWS_CREDENTIALS}")]) {
                         sh """
                         aws ecr get-login-password --region \${AWS_REGION} | docker login --username AWS --password-stdin \${ECR_REPOSITORY}
-                        kubectl create secret generic ecr-secret --namespace=\${KUBE_NAMESPACE} --from-file=.dockerconfigjson=\$HOME/.docker/config.json --dry-run=client -o json | kubectl apply -f -
+                        kubectl create secret generic ecr-secret --namespace=\${KUBE_NAMESPACE} --from-file=.dockerconfigjson=\$HOME/.docker/config.json -o json | kubectl apply -f -
                         """
                     }
                 }
@@ -95,9 +124,50 @@ pipeline {
             steps {
                 container('docker') {
                     withCredentials([aws(credentialsId: "${AWS_CREDENTIALS}")]) {
-                        sh "aws ecr get-login-password --region ${AWS_REGION} | docker login -u AWS --password-stdin ${ECR_REPOSITORY}"
-                        sh "docker push ${ECR_REPOSITORY}:${IMAGE_TAG}"
+                        script {
+                            def pushAttempts = 0
+                            def maxAttempts = 3
+                            
+                            while (pushAttempts < maxAttempts) {
+                                try {
+                                    sh "aws ecr get-login-password --region ${AWS_REGION} | docker login -u AWS --password-stdin ${ECR_REPOSITORY}"
+                                    sh "docker push ${ECR_REPOSITORY}:${IMAGE_TAG}"
+                                    break
+                                } catch (Exception e) {
+                                    pushAttempts++
+                                    if (pushAttempts == maxAttempts) {
+                                        error "Failed to push image after ${maxAttempts} attempts"
+                                    }
+                                    echo "Push attempt ${pushAttempts} failed, retrying..."
+                                    sleep 10
+                                }
+                            }
+                        }
                     }
+                }
+            }
+        }
+        stage('Deploy to Kubernetes with Helm') {
+            steps {
+                container('helm') {
+                    sh """
+                    # Check for any existing Helm operations
+                    if helm history ${HELM_CHART_NAME} -n ${KUBE_NAMESPACE} 2>/dev/null | grep 'pending'; then
+                        echo "Found pending operations. Attempting to rollback..."
+                        helm rollback ${HELM_CHART_NAME} 0 -n ${KUBE_NAMESPACE} || true
+                        sleep 10
+                    fi
+
+                    # Attempt the upgrade with a timeout
+                    timeout 300s helm upgrade --install ${HELM_CHART_NAME} ./helm-chart \
+                        --set image.repository=${ECR_REPOSITORY} \
+                        --set image.tag=${IMAGE_TAG} \
+                        -f ./helm-chart/values.yaml \
+                        --namespace ${KUBE_NAMESPACE} \
+                        --atomic \
+                        --cleanup-on-fail \
+                        --wait
+                    """
                 }
             }
         }
@@ -108,6 +178,27 @@ pipeline {
                     docker system prune -af || true
                     docker volume prune -f || true
                     """
+                }
+            }
+        }
+        stage('Rollback Deployment') {
+            when {
+                expression { currentBuild.result == 'FAILURE' }
+            }
+            steps {
+                container('helm') {
+                    sh "helm rollback ${HELM_CHART_NAME} 1 || echo 'No previous release to rollback'"
+                }
+            }
+        }
+        stage('Notifications') {
+            steps {
+                script {
+                    if (currentBuild.result == null || currentBuild.result == 'SUCCESS') {
+                        echo "Deployment succeeded."
+                    } else {
+                        echo "Deployment failed."
+                    }
                 }
             }
         }
