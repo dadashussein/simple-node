@@ -105,53 +105,52 @@ pipeline {
                 }
             }
         }
-        stage('Deploy to Kubernetes with Helm') {
-            steps {
-                container('helm') {
-                    script {
-                    if (sh(script: "helm history ${HELM_CHART_NAME} -n ${KUBE_NAMESPACE} 2>/dev/null | grep 'pending'", returnStatus: true) == 0) {
-                        echo "Found pending operations. Uninstalling previous release..."
-                        sh "helm uninstall ${HELM_CHART_NAME} -n ${KUBE_NAMESPACE} || true"
-                        sh "sleep 10"
-                    }
+//         stage('Deploy to Kubernetes with Helm') {
+//             steps {
+//                 container('helm') {
+//                     script {
+//                     if (sh(script: "helm history ${HELM_CHART_NAME} -n ${KUBE_NAMESPACE} 2>/dev/null | grep 'pending'", returnStatus: true) == 0) {
+//                         echo "Found pending operations. Uninstalling previous release..."
+//                         sh "helm uninstall ${HELM_CHART_NAME} -n ${KUBE_NAMESPACE} || true"
+//                         sh "sleep 10"
+//                     }
 
-                echo "Deploying with Helm..."
-                sh """
-                timeout 60s helm upgrade --install ${HELM_CHART_NAME} ./helm-chart \
-                    --set image.repository=${ECR_REPOSITORY} \
-                    --set image.tag=${IMAGE_TAG} \
-                    --set image.pullPolicy=Always \
-                    -f ./helm-chart/values.yaml \
-                    --namespace ${KUBE_NAMESPACE} \
-                    --atomic \
-                    --cleanup-on-fail \
-                    --wait
-                """
-            }
-        }
-    }
-}
+//                 echo "Deploying with Helm..."
+//                 sh """
+//                 timeout 60s helm upgrade --install ${HELM_CHART_NAME} ./helm-chart \
+//                     --set image.repository=${ECR_REPOSITORY} \
+//                     --set image.tag=${IMAGE_TAG} \
+//                     --set image.pullPolicy=Always \
+//                     -f ./helm-chart/values.yaml \
+//                     --namespace ${KUBE_NAMESPACE} \
+//                     --cleanup-on-fail \
+//                     --wait
+//                 """
+//             }
+//         }
+//     }
+// }
 
-        stage('Clean Up Docker') {
-            steps {
-                container('docker') {
-                    sh """
-                    docker system prune -af || true
-                    docker volume prune -f || true
-                    """
-                }
-            }
-        }
-        stage('Rollback Deployment') {
-            when {
-                expression { currentBuild.result == 'FAILURE' }
-            }
-            steps {
-                container('helm') {
-                    sh "helm rollback ${HELM_CHART_NAME} 1 || echo 'No previous release to rollback'"
-                }
-            }
-        }
+        // stage('Clean Up Docker') {
+        //     steps {
+        //         container('docker') {
+        //             sh """
+        //             docker system prune -af || true
+        //             docker volume prune -f || true
+        //             """
+        //         }
+        //     }
+        // }
+        // stage('Rollback Deployment') {
+        //     when {
+        //         expression { currentBuild.result == 'FAILURE' }
+        //     }
+        //     steps {
+        //         container('helm') {
+        //             sh "helm rollback ${HELM_CHART_NAME} 1 || echo 'No previous release to rollback'"
+        //         }
+        //     }
+        // }
         stage('Notifications') {
             steps {
                 script {
@@ -163,5 +162,5 @@ pipeline {
                 }
             }
         }
-    }
+    }W
 }
