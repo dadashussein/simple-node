@@ -113,8 +113,17 @@ pipeline {
                 container('docker') {
                     withCredentials([aws(credentialsId: "${AWS_CREDENTIALS}")]) {
                         sh """
-                        aws ecr get-login-password --region \${AWS_REGION} | docker login --username AWS --password-stdin \${ECR_REPOSITORY}
-                        kubectl create secret generic ecr-secret --namespace=\${KUBE_NAMESPACE} --from-file=.dockerconfigjson=\$HOME/.docker/config.json -o json | kubectl apply -f -
+                            aws ecr get-login-password --region ${AWS_REGION} | \
+                            docker login --username AWS --password-stdin ${ECR_URL}/${IMAGE_NAME}
+                            
+                            # Delete existing secret if it exists
+                            kubectl delete secret ecr-secret --namespace=${KUBE_NAMESPACE} --ignore-not-found=true
+                            
+                            # Create new secret
+                            kubectl create secret generic ecr-secret \
+                                --namespace=${KUBE_NAMESPACE} \
+                                --from-file=.dockerconfigjson=/root/.docker/config.json \
+                                --type=kubernetes.io/dockerconfigjson
                         """
                     }
                 }
@@ -159,7 +168,7 @@ pipeline {
                     fi
 
                     # Attempt the upgrade with a timeout
-                    timeout 300s helm upgrade --install ${HELM_CHART_NAME} ./helm-chart \
+                    timeout 100s helm upgrade --install ${HELM_CHART_NAME} ./helm-chart \
                         --set image.repository=${ECR_REPOSITORY} \
                         --set image.tag=${IMAGE_TAG} \
                         -f ./helm-chart/values.yaml \
