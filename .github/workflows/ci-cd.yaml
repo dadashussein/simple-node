@@ -21,6 +21,4 @@ jobs:
         uses: docker/build-push-action@v3
         with:
           push: true
-          tags: |
-            ghcr.io/dadashussein/nodejs:latest
-            ghcr.io/dadashussein/nodejs:${{ github.sha }}
+          tags: latest
