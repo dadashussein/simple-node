@@ -22,5 +22,5 @@ jobs:
         with:
           push: true
           tags: |
-            ghcr.io/dadashussein/package:latest
-            ghcr.io/dadashussein/package:${{ github.sha }}
+            ghcr.io/dadashussein/nodejs:latest
+            ghcr.io/dadashussein/nodejs:${{ github.sha }}
