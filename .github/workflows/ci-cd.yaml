@@ -3,7 +3,6 @@ name: CI/CD
 on: push
 
 jobs:
-
   build:
     name: Build
     runs-on: ubuntu-latest
@@ -23,5 +22,5 @@ jobs:
         with:
           push: true
           tags: |
-            ghcr.io/username/package:latest
-            ghcr.io/username/package:${{ github.sha }}
+            ghcr.io/dadashussein/package:latest
+            ghcr.io/dadashussein/package:${{ github.sha }}
