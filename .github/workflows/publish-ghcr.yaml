@@ -3,26 +3,36 @@ name: Docker Image CI for GHHCR
 on:
   push
 
-
 jobs:
   deploy:
     name: Deploy
     runs-on: ubuntu-latest
     steps:
+      # Set the Kubernetes context
       - name: Set the Kubernetes context
         uses: azure/k8s-set-context@v2
         with:
           method: service-account
           k8s-url: ${{ secrets.SERVICE_ACCOUNT }}
           k8s-secret: ${{ secrets.KUBERNETES_SECRET }}
-  
+      
+      # Checkout source code
       - name: Checkout source code
         uses: actions/checkout@v3
+      
+      # Install Helm
+      - name: Install Helm
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
-      - name: Deploy to the Kubernetes cluster
-        uses: debianmaster/actions-k3s@master
-        id: k3s
-        with:
-          version: 'latest'
-      - run: |
-          kubectl get nodes
+      # Deploy with Helm
+      - name: Deploy to Kubernetes with Helm
+        run: |
+          helm upgrade --install nodejs-app ./nodejs-app \
+            --namespace github \
+            --create-namespace
+      
+      # Verify deployment
+      - name: Verify Helm deployment
+        run: |
+          kubectl get pods --namespace github
