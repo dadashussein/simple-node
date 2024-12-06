@@ -5,18 +5,8 @@ on:
 
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - name: Build and push theh image
-        run: |
-          docker login --username dadashussein  --password ${{secrets.GH_PAT}} ghcr.io
-          docker build . --tag ghcr.io/dadashussein/nodejs:latest
-          docker push ghcr.io/dadashussein/nodejs:latest
   deploy:
     name: Deploy
-    needs: [ build ]
     runs-on: ubuntu-latest
     steps:
       - name: Set the Kubernetes context
@@ -35,4 +25,5 @@ jobs:
         with:
           version: 'latest'
       - run: |
-          kubectl get nodes
+          helm upgrade nodejs-app ./nodejs-app --namespace github
+          kubectl get all -n github
