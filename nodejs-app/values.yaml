@@ -1,5 +1,4 @@
 image:
-  repository: ghcr.io/dadashussein/nodejs
   pullPolicy: Always
   tag: latest
 
