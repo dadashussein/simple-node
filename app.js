@@ -5,7 +5,7 @@ const port = 3000;
 
 app.get('/', (req, res) => {
   res.json({
-    message: 'Salam bu ise teze!',
+    message: 'Ha gau=yret!',
     hostname: os.hostname(),
     timestamp: new Date().toISOString()
   });
