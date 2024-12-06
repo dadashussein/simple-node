@@ -1,6 +1,9 @@
 image:
+  repository: ghcr.io/dadashussein/nodej
   pullPolicy: Always
-  tag: latest
+  # Use a specific tag from your CI/CD pipeline (e.g., commit SHA, build number, or timestamp)
+  # tag: latest  # Avoid using latest
+  tag: "${VERSION}"  # This will be replaced by your CI/CD pipeline
 
 service:
   type: NodePort

@@ -8,11 +8,25 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - name: Build and push theh image
+      
+      - name: Generate version tag
+        id: version
         run: |
-          docker login --username dadashussein  --password ${{secrets.GH_PAT}} ghcr.io
-          docker build . --tag ghcr.io/dadashussein/nodejs:latest
+          echo "SHA_TAG=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          echo "TIMESTAMP=$(date +%Y%m%d-%H%M%S)" >> $GITHUB_ENV
+          echo "VERSION=${GITHUB_SHA::7}-${TIMESTAMP}" >> $GITHUB_ENV
+          
+      - name: Build and push the image
+        run: |
+          docker login --username dadashussein --password ${{secrets.GH_PAT}} ghcr.io
+          # Build with multiple tags - latest, commit SHA, and version
+          docker build . --tag ghcr.io/dadashussein/nodejs:latest \
+                        --tag ghcr.io/dadashussein/nodejs:${{ env.SHA_TAG }} \
+                        --tag ghcr.io/dadashussein/nodejs:${{ env.VERSION }}
+          # Push all tags
           docker push ghcr.io/dadashussein/nodejs:latest
+          docker push ghcr.io/dadashussein/nodejs:${{ env.SHA_TAG }}
+          docker push ghcr.io/dadashussein/nodejs:${{ env.VERSION }}
 
   deploy:
     name: Deploy
@@ -33,10 +47,17 @@ jobs:
         run: |
           curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
+      - name: Generate version tag
+        id: version
+        run: |
+          echo "SHA_TAG=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          echo "TIMESTAMP=$(date +%Y%m%d-%H%M%S)" >> $GITHUB_ENV
+          echo "VERSION=${GITHUB_SHA::7}-${TIMESTAMP}" >> $GITHUB_ENV
+
       - name: Deploy to Kubernetes with Helm
         run: |
-          helm upgrade --install nodejs-app ./nodejs-app \
+          helm upgrade --install nodejs-app ./node-deployment \
             --namespace github \
             --set image.repository=ghcr.io/dadashussein/nodejs \
-            --set image.tag=latest \
+            --set image.tag=${{ env.VERSION }} \
             --create-namespace
