@@ -25,9 +25,6 @@ jobs:
           method: service-account
           k8s-url: ${{ secrets.SERVICE_ACCOUNT }}
           k8s-secret: ${{ secrets.KUBERNETES_SECRET }}
-  
-      - name: Checkout source code
-        uses: actions/checkout@v3
 
       - name: Deploy to the Kubernetes cluster
         - uses: debianmaster/actions-k3s@master
