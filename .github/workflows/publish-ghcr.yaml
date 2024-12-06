@@ -25,7 +25,6 @@ jobs:
                         --tag ghcr.io/dadashussein/nodejs:${{ env.VERSION }}
           # Push all tags
           docker push ghcr.io/dadashussein/nodejs:latest
-          docker push ghcr.io/dadashussein/nodejs:${{ env.SHA_TAG }}
           docker push ghcr.io/dadashussein/nodejs:${{ env.VERSION }}
 
   deploy:
@@ -58,6 +57,4 @@ jobs:
         run: |
           helm upgrade --install nodejs-app ./node-deployment \
             --namespace github \
-            --set image.repository=ghcr.io/dadashussein/nodejs \
-            --set image.tag=${{ env.VERSION }} \
             --create-namespace
