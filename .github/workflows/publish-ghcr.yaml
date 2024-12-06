@@ -25,5 +25,5 @@ jobs:
         with:
           version: 'latest'
       - run: |
-          helm upgrade nodejs-app ./nodejs-app --namespace github
+          helm upgrade --install nodejs-app ./nodejs-app --namespace github
           kubectl get all -n github
