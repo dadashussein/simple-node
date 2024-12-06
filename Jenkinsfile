@@ -28,19 +28,13 @@ pipeline {
                   value: ""
                 - name: DOCKER_HOST
                   value: tcp://localhost:2375
-              - name: kubernetes
-                image: bitnami/kubectl:latest
+              - name: helm
+                image: alpine/helm:3.11.1
                 command: ['cat']
                 tty: true
-                volumeMounts:
-                - name: kube-config
-                  mountPath: /root/.kube
               volumes:
               - name: dind-storage
                 emptyDir: {}
-              - name: kube-config
-                secret:
-                  secretName: kube-config
             """
         }
     }
@@ -164,49 +158,25 @@ pipeline {
         }
         stage('Deploy to Kubernetes with Helm') {
             steps {
-                container('kubernetes') {
-                    withCredentials([aws(credentialsId: "${AWS_CREDENTIALS}")]) {
-                        sh """
-                            # Verify kubectl configuration
-                            kubectl config view
-                            kubectl cluster-info
-                            
-                            # Add debug information
-                            echo "Current context:"
-                            kubectl config current-context
-                            echo "Available pods before deployment:"
-                            kubectl get pods -n ${KUBE_NAMESPACE}
+                container('helm') {
+                    sh """
+                    # Check for any existing Helm operations
+                    if helm history ${HELM_CHART_NAME} -n ${KUBE_NAMESPACE} 2>/dev/null | grep 'pending'; then
+                        echo "Found pending operations. Attempting to rollback..."
+                        helm rollback ${HELM_CHART_NAME} 0 -n ${KUBE_NAMESPACE} || true
+                        sleep 10
+                    fi
 
-                            # Verify helm chart
-                            helm lint ./helm-chart
-
-                            # Perform helm upgrade with rollback on failure
-                            if ! helm upgrade ${HELM_CHART_NAME} ./helm-chart \
-                                --install \
-                                --namespace ${KUBE_NAMESPACE} \
-                                --set image.repository=${ECR_REPOSITORY} \
-                                --set image.tag=${IMAGE_TAG} \
-                                --wait \
-                                --timeout 90s \
-                                --atomic \
-                                --cleanup-on-fail \
-                                -f ./helm-chart/values.yaml; then
-                                
-                                echo "Deployment failed. Checking pod status..."
-                                kubectl get pods -n ${KUBE_NAMESPACE}
-                                echo "Checking pod logs..."
-                                kubectl logs -l app=${HELM_CHART_NAME} -n ${KUBE_NAMESPACE} --tail=50
-                                exit 1
-                            fi
-
-                            # Verify deployment
-                            echo "Checking deployment status..."
-                            kubectl rollout status deployment/${HELM_CHART_NAME} -n ${KUBE_NAMESPACE} --timeout=60s
-                            
-                            echo "Final pod status:"
-                            kubectl get pods -n ${KUBE_NAMESPACE}
-                        """
-                    }
+                    # Attempt the upgrade with a timeout
+                    timeout 100s helm upgrade --install ${HELM_CHART_NAME} ./helm-chart \
+                        --set image.repository=${ECR_REPOSITORY} \
+                        --set image.tag=${IMAGE_TAG} \
+                        -f ./helm-chart/values.yaml \
+                        --namespace ${KUBE_NAMESPACE} \
+                        --atomic \
+                        --cleanup-on-fail \
+                        --wait
+                    """
                 }
             }
         }
@@ -225,7 +195,7 @@ pipeline {
                 expression { currentBuild.result == 'FAILURE' }
             }
             steps {
-                container('kubernetes') {
+                container('helm') {
                     sh "helm rollback ${HELM_CHART_NAME} 1 || echo 'No previous release to rollback'"
                 }
             }

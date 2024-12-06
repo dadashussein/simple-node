@@ -81,7 +81,7 @@ service:
   # -- Service port
   port: 3000
   # -- Node port (only if service.type is NodePort)
-  nodePort: 32001
+  nodePort: 32002
   # -- Additional service annotations
   annotations: {}
 
