@@ -22,5 +22,5 @@ jobs:
       - name: Deploy to the Kubernetes cluster
         uses: azure/k8s-deploy@v1
         with:
-        - run: |
+          run: |
             kubectl get nodes
