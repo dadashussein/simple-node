@@ -4,11 +4,21 @@ on:
   push
 
 jobs:
-  deploy:
-    name: Deploy
+  build:
     runs-on: ubuntu-latest
     steps:
-      # Set the Kubernetes context
+      - uses: actions/checkout@v3
+      - name: Build and push theh image
+        run: |
+          docker login --username dadashussein  --password ${{secrets.GH_PAT}} ghcr.io
+          docker build . --tag ghcr.io/dadashussein/nodejs:latest
+          docker push ghcr.io/dadashussein/nodejs:latest
+
+  deploy:
+    name: Deploy
+    needs: [ build ]
+    runs-on: ubuntu-latest
+    steps:
       - name: Set the Kubernetes context
         uses: azure/k8s-set-context@v2
         with:
@@ -16,23 +26,15 @@ jobs:
           k8s-url: ${{ secrets.SERVICE_ACCOUNT }}
           k8s-secret: ${{ secrets.KUBERNETES_SECRET }}
       
-      # Checkout source code
       - name: Checkout source code
         uses: actions/checkout@v3
       
-      # Install Helm
       - name: Install Helm
         run: |
           curl -fsSL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
-      # Deploy with Helm
       - name: Deploy to Kubernetes with Helm
         run: |
           helm upgrade --install nodejs-app ./nodejs-app \
             --namespace github \
             --create-namespace
-      
-      # Verify deployment
-      - name: Verify Helm deployment
-        run: |
-          kubectl get pods --namespace github
