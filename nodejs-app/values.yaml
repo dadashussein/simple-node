@@ -1,0 +1,26 @@
+image:
+  repository: ghcr.io/dadashussein/nodejs
+  pullPolicy: Always
+  tag: latest
+
+service:
+  type: NodePort
+  port: 3000
+  nodePort: 32001
+
+resources:
+  limits:
+    cpu: 200m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi
+
+autoscaling:
+  enabled: false
+  minReplicas: 1
+  maxReplicas: 3
+  targetCPUUtilizationPercentage: 80
+
+imagePullSecrets:
+  - name: github-container-registry
