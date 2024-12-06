@@ -37,4 +37,6 @@ jobs:
         run: |
           helm upgrade --install nodejs-app ./nodejs-app \
             --namespace github \
+            --set image.repository=ghcr.io/dadashussein/nodejs \
+            --set image.tag=latest \
             --create-namespace
